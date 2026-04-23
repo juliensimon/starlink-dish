@@ -13,6 +13,12 @@
     "prepublishOnly": "npm run build && npm test"
   },
   "keywords": ["starlink", "grpc", "satellite", "spacex"],
+  "author": "Julien Simon <julien@arcee.ai>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/juliensimon/starlink-dish.git"
+  },
+  "homepage": "https://github.com/juliensimon/starlink-dish#readme",
   "license": "MIT",
   "dependencies": {
     "@grpc/grpc-js": "^1.12.0",
