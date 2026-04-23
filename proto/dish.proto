@@ -58,7 +58,7 @@ message DeviceInfo {
 }
 
 message DeviceState {
-  uint64 uptime_s = 3;
+  uint64 uptime_s = 1;
 }
 
 message DishObstructionStats {
