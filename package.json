@@ -1,18 +1,29 @@
 {
   "name": "starlink-dish",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "TypeScript client library and CLI for the Starlink dish local gRPC API",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
-  "bin": { "starlink-dish": "dist/cli/index.js" },
-  "files": ["dist", "proto", "README.md"],
+  "bin": {
+    "starlink-dish": "dist/cli/index.js"
+  },
+  "files": [
+    "dist",
+    "proto",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build && npm test"
   },
-  "keywords": ["starlink", "grpc", "satellite", "spacex"],
+  "keywords": [
+    "starlink",
+    "grpc",
+    "satellite",
+    "spacex"
+  ],
   "author": "Julien Simon <julien@arcee.ai>",
   "repository": {
     "type": "git",
