@@ -59,4 +59,56 @@ describe('speedTest()', () => {
     setHandle((_req, cb) => cb(new Error('error') as any, null));
     expect(await speedTest()).toBeNull();
   });
+
+  it('polls until running is false', async () => {
+    let callCount = 0;
+    setHandle((req: any, cb) => {
+      if (req.startSpeedtest !== undefined) {
+        cb(null, { startSpeedtest: {} });
+      } else if (req.getSpeedtestResult !== undefined) {
+        callCount++;
+        if (callCount < 3) {
+          cb(null, { getSpeedtestResult: { downloadBps: 0, uploadBps: 0, latencyMs: 0, running: true } });
+        } else {
+          cb(null, { getSpeedtestResult: { downloadBps: 50_000_000, uploadBps: 5_000_000, latencyMs: 30.0, running: false } });
+        }
+      }
+    });
+
+    const result = await speedTest();
+
+    expect(result).not.toBeNull();
+    expect(callCount).toBe(3);
+    expect(result!.downloadMbps).toBeCloseTo(50);
+  }, 10_000);
+
+  it('returns null on gRPC error during polling', async () => {
+    let callCount = 0;
+    setHandle((req: any, cb) => {
+      if (req.startSpeedtest !== undefined) {
+        cb(null, { startSpeedtest: {} });
+      } else if (req.getSpeedtestResult !== undefined) {
+        callCount++;
+        cb(new Error('poll error') as any, null);
+      }
+    });
+
+    const result = await speedTest();
+    expect(result).toBeNull();
+    expect(callCount).toBeGreaterThan(0);
+  });
+
+  it('returns null when timeout expires', async () => {
+    setHandle((req: any, cb) => {
+      if (req.startSpeedtest !== undefined) {
+        cb(null, { startSpeedtest: {} });
+      } else if (req.getSpeedtestResult !== undefined) {
+        // never complete: always running
+        cb(null, { getSpeedtestResult: { downloadBps: 0, uploadBps: 0, latencyMs: 0, running: true } });
+      }
+    });
+
+    const result = await speedTest(100); // 100ms timeout
+    expect(result).toBeNull();
+  }, 5_000);
 });
