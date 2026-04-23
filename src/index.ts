@@ -1,2 +1,7 @@
-// exports wired in Task 11
-export {};
+export type { DishStatus, DishHistory, SpeedTestResult, MockOptions } from './types';
+export { initClient, closeClient } from './client';
+export { isConnected } from './transport';
+export { getStatus } from './status';
+export { getHistory } from './history';
+export { reboot, speedTest } from './control';
+export { useMock } from './mock';
