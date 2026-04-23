@@ -88,6 +88,28 @@ describe('parseStatus()', () => {
     expect(s.snrAboveNoiseFloor).toBe(false);
     expect(s.alerts).toEqual([]);
   });
+
+  it('converts fractionObstructed to obstructionPercentTime ×100', () => {
+    const s = parseStatus({ dishGetStatus: { obstructionStats: { fractionObstructed: 0.037 } } })!;
+    expect(s.obstructionPercentTime).toBeCloseTo(3.7);
+  });
+
+  it('maps all five alert flags when all are set', () => {
+    const raw = {
+      dishGetStatus: {
+        alerts: {
+          motorsStuck: true,
+          thermalShutdown: true,
+          thermalThrottle: true,
+          unexpectedLocation: true,
+          slowEthernetSpeeds: true,
+        },
+      },
+    };
+    expect(parseStatus(raw)!.alerts).toEqual([
+      'motors_stuck', 'thermal_throttle', 'thermal_shutdown', 'unexpected_location', 'slow_ethernet_speeds',
+    ]);
+  });
 });
 
 describe('getStatus()', () => {
@@ -119,6 +141,16 @@ describe('getStatus()', () => {
 
   it('returns null when handle returns an error', async () => {
     setHandle((_req, cb) => cb(new Error('network error') as any, null));
+    expect(await getStatus()).toBeNull();
+  });
+
+  it('returns null when handle returns null response', async () => {
+    setHandle((_req, cb) => cb(null, null));
+    expect(await getStatus()).toBeNull();
+  });
+
+  it('returns null when handle returns response without dishGetStatus', async () => {
+    setHandle((_req, cb) => cb(null, { dishGetHistory: {} }));
     expect(await getStatus()).toBeNull();
   });
 });

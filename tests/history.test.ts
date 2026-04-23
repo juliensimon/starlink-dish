@@ -70,4 +70,9 @@ describe('getHistory()', () => {
     setHandle((_req, cb) => cb(new Error('network error') as any, null));
     expect(await getHistory()).toBeNull();
   });
+
+  it('returns null when handle returns null response', async () => {
+    setHandle((_req, cb) => cb(null, null));
+    expect(await getHistory()).toBeNull();
+  });
 });

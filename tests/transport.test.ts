@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { isConnected, setHandle, clearHandle, getHandle } from '../src/transport';
+import { isConnected, isMocked, setHandle, setMocked, clearHandle, getHandle } from '../src/transport';
+import { useMock } from '../src/mock';
 import { initClient, closeClient } from '../src/client';
 
 describe('transport', () => {
@@ -31,6 +32,38 @@ describe('transport', () => {
     setHandle((_req, cb) => cb(null, {}));
     clearHandle();
     expect(getHandle()).toBeNull();
+  });
+});
+
+describe('isMocked()', () => {
+  afterEach(() => clearHandle());
+
+  it('is false initially', () => {
+    clearHandle();
+    expect(isMocked()).toBe(false);
+  });
+
+  it('is false after setHandle() — real gRPC path does not set mock flag', () => {
+    setHandle((_req, cb) => cb(null, {}));
+    expect(isMocked()).toBe(false);
+  });
+
+  it('is true after useMock()', () => {
+    useMock();
+    expect(isMocked()).toBe(true);
+  });
+
+  it('is false after clearHandle() even if mock was set', () => {
+    useMock();
+    clearHandle();
+    expect(isMocked()).toBe(false);
+  });
+
+  it('setMocked(true) / setMocked(false) toggle the flag directly', () => {
+    setMocked(true);
+    expect(isMocked()).toBe(true);
+    setMocked(false);
+    expect(isMocked()).toBe(false);
   });
 });
 

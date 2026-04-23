@@ -53,6 +53,17 @@ describe('formatStatus()', () => {
     const s = { ...sampleStatus, alerts: ['thermal_throttle'] };
     expect(formatStatus(s)).toContain('thermal_throttle');
   });
+
+  it('shows BELOW noise floor when snrAboveNoiseFloor is false', () => {
+    const s = { ...sampleStatus, snrAboveNoiseFloor: false };
+    expect(formatStatus(s)).toContain('BELOW noise floor');
+  });
+
+  it('includes hardware version and software version', () => {
+    const out = formatStatus(sampleStatus);
+    expect(out).toContain('4.0');
+    expect(out).toContain('2025.12.0');
+  });
 });
 
 const sampleResult: SpeedTestResult = { downloadMbps: 95.4, uploadMbps: 11.2, latencyMs: 27.0 };
@@ -62,6 +73,19 @@ describe('formatSpeedTest()', () => {
     const out = formatSpeedTest(sampleResult);
     expect(out).toContain('95.4');
     expect(out).toContain('11.2');
+  });
+
+  it('includes ping when latencyMs > 0', () => {
+    expect(formatSpeedTest(sampleResult)).toContain('27.0');
+  });
+
+  it('omits ping when latencyMs is 0', () => {
+    const out = formatSpeedTest({ downloadMbps: 95.4, uploadMbps: 11.2, latencyMs: 0 });
+    expect(out).not.toContain('Ping');
+  });
+
+  it('includes separator line', () => {
+    expect(formatSpeedTest(sampleResult)).toContain('━');
   });
 });
 

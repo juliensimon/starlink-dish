@@ -4,12 +4,15 @@ import { initClient, closeClient, useMock, getStatus, getHistory, reboot, speedT
 import type { SpeedTestProgress } from '../src/index';
 import { formatStatus, formatHistory, formatSpeedTest } from './format';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { version } = require('../../package.json') as { version: string };
+
 const program = new Command();
 
 program
   .name('starlink-dish')
   .description('Starlink dish local gRPC client')
-  .version('0.1.0')
+  .version(version)
   .option('--address <addr>', 'dish address', '192.168.100.1:9200')
   .option('--mock', 'use mock data (no dish required)');
 

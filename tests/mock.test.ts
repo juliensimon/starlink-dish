@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { useMock } from '../src/mock';
-import { clearHandle, isConnected } from '../src/transport';
+import { clearHandle, isConnected, isMocked } from '../src/transport';
 import { getStatus } from '../src/status';
 import { getHistory } from '../src/history';
 import { reboot, speedTest } from '../src/control';
@@ -51,5 +51,17 @@ describe('useMock()', () => {
   it('faultRate:1 causes getStatus() to return null', async () => {
     useMock({ faultRate: 1 });
     expect(await getStatus()).toBeNull();
+  });
+
+  it('faultRate:1 causes speedTest() to return null', async () => {
+    useMock({ faultRate: 1 });
+    expect(await speedTest()).toBeNull();
+  });
+
+  it('isMocked() is true after useMock() and false after clearHandle()', () => {
+    useMock();
+    expect(isMocked()).toBe(true);
+    clearHandle();
+    expect(isMocked()).toBe(false);
   });
 });

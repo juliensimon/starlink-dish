@@ -36,6 +36,9 @@ npm install starlink-dish
 
 # As a global CLI
 npm install -g starlink-dish
+
+# Update to the latest version
+npm install -g starlink-dish@latest
 ```
 
 ## CLI
@@ -51,8 +54,9 @@ starlink-dish status --json
 starlink-dish history
 starlink-dish history --json
 
-# Run a speed test
+# Run a speed test (HTTP via Cloudflare, with live progress)
 starlink-dish speed-test
+starlink-dish speed-test --json
 
 # Reboot the dish (prompts for confirmation)
 starlink-dish reboot
@@ -63,6 +67,16 @@ starlink-dish --mock speed-test
 
 # Connect to a custom address
 starlink-dish --address 10.0.0.1:9200 status
+```
+
+### Speed test output
+
+```
+Running speed test via Cloudflare...
+Download  ████████████████████████████████████████   95.1 Mbps ✓
+Upload    ████████████████████████████████████████   11.4 Mbps ✓
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Download  95.1 Mbps   Upload  11.4 Mbps   Ping   28.4 ms
 ```
 
 ## Library usage
@@ -86,6 +100,15 @@ if (connected) {
   const history = await getHistory();
   const avgPing = history?.pingLatencyMs.reduce((a, b) => a + b, 0) / history?.pingLatencyMs.length;
   console.log(`Avg ping: ${avgPing?.toFixed(1)} ms`);
+
+  // Speed test runs via Cloudflare HTTP — no dish connection required
+  const result = await speedTest();
+  console.log(`Download: ${result?.downloadMbps.toFixed(1)} Mbps`);
+
+  // With live progress callback
+  await speedTest(30_000, (p) => {
+    console.log(`${p.phase}: ${(p.progressFraction * 100).toFixed(0)}% — ${p.currentMbps.toFixed(1)} Mbps`);
+  });
 
   closeClient();
 }
@@ -124,7 +147,7 @@ useMock({ faultRate: 0.1 });     // 10% random failure rate for resilience testi
 | Function | Returns | Description |
 |----------|---------|-------------|
 | `reboot()` | `Promise<boolean>` | Send a reboot command. Returns `true` on success. |
-| `speedTest()` | `Promise<SpeedTestResult \| null>` | Run a speed test (takes 10–30 seconds). |
+| `speedTest(timeoutMs?, onProgress?)` | `Promise<SpeedTestResult \| null>` | HTTP speed test via Cloudflare. Works without a dish connection. |
 
 ### Mock mode
 
@@ -170,7 +193,13 @@ interface DishHistory {
 interface SpeedTestResult {
   downloadMbps: number;
   uploadMbps: number;
-  latencyMs: number;
+  latencyMs: number;               // dish popPingLatencyMs if connected, else 0
+}
+
+interface SpeedTestProgress {
+  phase: 'download' | 'upload';
+  progressFraction: number;        // 0–1
+  currentMbps: number;
 }
 
 interface MockOptions {
@@ -182,6 +211,7 @@ interface MockOptions {
 
 - Node.js 18+
 - A Starlink dish on your local network (or use `--mock` / `useMock()`)
+- Speed test requires internet access (uses Cloudflare endpoints)
 
 ## License
 
