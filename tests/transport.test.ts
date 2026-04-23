@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { isConnected, setHandle, clearHandle, getHandle } from '../src/transport';
+import { initClient, closeClient } from '../src/client';
 
 describe('transport', () => {
   afterEach(() => clearHandle());
@@ -30,5 +31,19 @@ describe('transport', () => {
     setHandle((_req, cb) => cb(null, {}));
     clearHandle();
     expect(getHandle()).toBeNull();
+  });
+});
+
+describe('initClient()', () => {
+  afterEach(() => closeClient());
+
+  it('returns false when address is unreachable', async () => {
+    const result = await initClient('127.0.0.1:19999');
+    expect(result).toBe(false);
+  }, 5000);
+
+  it('sets isConnected() to false after closeClient()', async () => {
+    closeClient();
+    expect(isConnected()).toBe(false);
   });
 });
