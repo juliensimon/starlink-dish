@@ -1,4 +1,4 @@
-export type { DishStatus, DishHistory, SpeedTestResult, MockOptions } from './types';
+export type { DishStatus, DishHistory, SpeedTestResult, SpeedTestProgress, MockOptions } from './types';
 export { initClient, closeClient } from './client';
 export { isConnected } from './transport';
 export { getStatus } from './status';

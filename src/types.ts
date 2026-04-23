@@ -39,3 +39,9 @@ export interface SpeedTestResult {
 export interface MockOptions {
   faultRate?: number;
 }
+
+export interface SpeedTestProgress {
+  phase: 'download' | 'upload';
+  progressFraction: number;  // 0–1
+  currentMbps: number;
+}

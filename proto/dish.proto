@@ -12,17 +12,13 @@ message Request {
   oneof request {
     GetStatusRequest get_status = 1004;
     GetHistoryRequest get_history = 1007;
-    RebootRequest reboot = 1005;
-    StartSpeedtestRequest start_speedtest = 1003;
-    GetSpeedtestResultRequest get_speedtest_result = 1027;
+    RebootRequest reboot = 1001;
   }
 }
 
 message GetStatusRequest {}
 message GetHistoryRequest {}
 message RebootRequest {}
-message StartSpeedtestRequest {}
-message GetSpeedtestResultRequest {}
 
 message Response {
   uint64 id = 1;
@@ -30,22 +26,11 @@ message Response {
   oneof response {
     DishGetStatusResponse dish_get_status = 2004;
     DishGetHistoryResponse dish_get_history = 2006;
-    RebootResponse reboot = 2005;
-    StartSpeedtestResponse start_speedtest = 2001;
-    GetSpeedtestResultResponse get_speedtest_result = 2034;
+    RebootResponse reboot = 1001;
   }
 }
 
 message RebootResponse {}
-
-message StartSpeedtestResponse {}
-
-message GetSpeedtestResultResponse {
-  float download_bps = 1;
-  float upload_bps = 2;
-  float latency_ms = 3;
-  bool running = 4;
-}
 
 message DishGetStatusResponse {
   DeviceInfo device_info = 1;

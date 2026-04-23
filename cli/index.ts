@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { initClient, closeClient, useMock, getStatus, getHistory, reboot, speedTest } from '../src/index';
+import type { SpeedTestProgress } from '../src/index';
 import { formatStatus, formatHistory, formatSpeedTest } from './format';
 
 const program = new Command();
@@ -66,14 +67,38 @@ program
 
 program
   .command('speed-test')
-  .description('Run a speed test')
+  .description('Run a speed test via Cloudflare')
   .option('--json', 'output raw JSON')
   .action(async (cmdOpts) => {
     const opts = program.opts<{ address: string; mock?: boolean }>();
     if (!await connect(opts)) { closeClient(); process.exit(1); }
-    console.log('Running speed test...');
-    const r = await speedTest();
+
+    const showProgress = process.stdout.isTTY && !cmdOpts.json;
+    let lastPhase: SpeedTestProgress['phase'] | null = null;
+
+    function renderBar(p: SpeedTestProgress): string {
+      const BAR = 40;
+      const filled = Math.round(Math.min(1, p.progressFraction) * BAR);
+      const bar = '█'.repeat(filled) + '░'.repeat(BAR - filled);
+      const label = p.phase === 'download' ? 'Download' : 'Upload  ';
+      const check = p.progressFraction >= 1 ? ' ✓' : '  ';
+      return `${label}  ${bar}  ${p.currentMbps.toFixed(1).padStart(6)} Mbps${check}`;
+    }
+
+    function onProgress(p: SpeedTestProgress) {
+      if (!showProgress) return;
+      if (lastPhase !== null && p.phase !== lastPhase) process.stdout.write('\n');
+      lastPhase = p.phase;
+      process.stdout.write('\r' + renderBar(p));
+    }
+
+    if (!cmdOpts.json) process.stdout.write('Running speed test via Cloudflare...\n');
+
+    const r = await speedTest(30_000, showProgress ? onProgress : undefined);
+
+    if (showProgress && lastPhase !== null) process.stdout.write('\n');
     closeClient();
+
     if (!r) { console.error('Speed test failed'); process.exit(1); }
     console.log(cmdOpts.json ? JSON.stringify(r, null, 2) : formatSpeedTest(r));
   });

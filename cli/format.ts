@@ -39,10 +39,10 @@ export function formatHistory(h: { pingLatencyMs: number[]; downlinkThroughputBp
 }
 
 export function formatSpeedTest(r: SpeedTestResult): string {
+  const bar = '━'.repeat(51);
+  const ping = r.latencyMs > 0 ? `   Ping   ${r.latencyMs.toFixed(1)} ms` : '';
   return [
-    'Speed Test Results:',
-    ` Download: ${r.downloadMbps.toFixed(1)} Mbps`,
-    ` Upload:   ${r.uploadMbps.toFixed(1)} Mbps`,
-    ` Latency:  ${r.latencyMs.toFixed(1)} ms`,
+    bar,
+    ` Download  ${r.downloadMbps.toFixed(1)} Mbps   Upload  ${r.uploadMbps.toFixed(1)} Mbps${ping}`,
   ].join('\n');
 }

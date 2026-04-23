@@ -1,6 +1,8 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { reboot, speedTest } from '../src/control';
 import { setHandle, clearHandle } from '../src/transport';
+import { useMock } from '../src/mock';
+import type { SpeedTestProgress } from '../src/types';
 
 describe('reboot()', () => {
   afterEach(() => clearHandle());
@@ -28,87 +30,37 @@ describe('reboot()', () => {
 describe('speedTest()', () => {
   afterEach(() => clearHandle());
 
-  it('returns null when not connected', async () => {
+  it('returns a SpeedTestResult in mock mode', async () => {
+    useMock();
+    const r = await speedTest();
+    expect(r).not.toBeNull();
+    expect(r!.downloadMbps).toBeGreaterThan(0);
+    expect(r!.uploadMbps).toBeGreaterThan(0);
+    expect(typeof r!.latencyMs).toBe('number');
+  });
+
+  it('returns null in mock mode with faultRate 1', async () => {
+    useMock({ faultRate: 1 });
     expect(await speedTest()).toBeNull();
   });
 
-  it('sends start + poll and returns SpeedTestResult', async () => {
-    const requests: unknown[] = [];
-    setHandle((req: any, cb) => {
-      requests.push(req);
-      if (req.startSpeedtest !== undefined) {
-        cb(null, { startSpeedtest: {} });
-      } else if (req.getSpeedtestResult !== undefined) {
-        cb(null, {
-          getSpeedtestResult: { downloadBps: 100_000_000, uploadBps: 10_000_000, latencyMs: 25.0, running: false }
-        });
-      }
-    });
-
-    const result = await speedTest();
-
-    expect(result).not.toBeNull();
-    expect(result!.downloadMbps).toBeCloseTo(100);
-    expect(result!.uploadMbps).toBeCloseTo(10);
-    expect(result!.latencyMs).toBe(25.0);
-    expect(requests[0]).toEqual({ startSpeedtest: {} });
-    expect(requests[1]).toEqual({ getSpeedtestResult: {} });
+  it('calls onProgress with download and upload phases in mock mode', async () => {
+    useMock();
+    const events: SpeedTestProgress[] = [];
+    await speedTest(30_000, (p) => events.push(p));
+    expect(events.some((e) => e.phase === 'download')).toBe(true);
+    expect(events.some((e) => e.phase === 'upload')).toBe(true);
+    expect(events.find((e) => e.phase === 'download')!.progressFraction).toBe(1);
+    expect(events.find((e) => e.phase === 'upload')!.progressFraction).toBe(1);
   });
 
-  it('returns null on gRPC error during start', async () => {
-    setHandle((_req, cb) => cb(new Error('error') as any, null));
-    expect(await speedTest()).toBeNull();
+  it('reports correct speeds in mock progress events', async () => {
+    useMock();
+    const events: SpeedTestProgress[] = [];
+    const r = await speedTest(30_000, (p) => events.push(p));
+    const dl = events.find((e) => e.phase === 'download');
+    const ul = events.find((e) => e.phase === 'upload');
+    expect(dl!.currentMbps).toBeCloseTo(r!.downloadMbps);
+    expect(ul!.currentMbps).toBeCloseTo(r!.uploadMbps);
   });
-
-  it('polls until running is false', async () => {
-    let callCount = 0;
-    setHandle((req: any, cb) => {
-      if (req.startSpeedtest !== undefined) {
-        cb(null, { startSpeedtest: {} });
-      } else if (req.getSpeedtestResult !== undefined) {
-        callCount++;
-        if (callCount < 3) {
-          cb(null, { getSpeedtestResult: { downloadBps: 0, uploadBps: 0, latencyMs: 0, running: true } });
-        } else {
-          cb(null, { getSpeedtestResult: { downloadBps: 50_000_000, uploadBps: 5_000_000, latencyMs: 30.0, running: false } });
-        }
-      }
-    });
-
-    const result = await speedTest();
-
-    expect(result).not.toBeNull();
-    expect(callCount).toBe(3);
-    expect(result!.downloadMbps).toBeCloseTo(50);
-  }, 10_000);
-
-  it('returns null on gRPC error during polling', async () => {
-    let callCount = 0;
-    setHandle((req: any, cb) => {
-      if (req.startSpeedtest !== undefined) {
-        cb(null, { startSpeedtest: {} });
-      } else if (req.getSpeedtestResult !== undefined) {
-        callCount++;
-        cb(new Error('poll error') as any, null);
-      }
-    });
-
-    const result = await speedTest();
-    expect(result).toBeNull();
-    expect(callCount).toBeGreaterThan(0);
-  });
-
-  it('returns null when timeout expires', async () => {
-    setHandle((req: any, cb) => {
-      if (req.startSpeedtest !== undefined) {
-        cb(null, { startSpeedtest: {} });
-      } else if (req.getSpeedtestResult !== undefined) {
-        // never complete: always running
-        cb(null, { getSpeedtestResult: { downloadBps: 0, uploadBps: 0, latencyMs: 0, running: true } });
-      }
-    });
-
-    const result = await speedTest(100); // 100ms timeout
-    expect(result).toBeNull();
-  }, 5_000);
 });

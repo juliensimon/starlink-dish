@@ -1,4 +1,4 @@
-import { setHandle } from './transport';
+import { setHandle, setMocked } from './transport';
 import type { MockOptions } from './types';
 
 function smoothNoise(t: number, ...freqs: number[]): number {
@@ -55,6 +55,7 @@ function buildHistoryResponse(t: number) {
 export function useMock(options: MockOptions = {}): void {
   const { faultRate = 0 } = options;
   const start = Date.now();
+  setMocked(true);
 
   setHandle((request, callback) => {
     const req = request as Record<string, unknown>;
@@ -71,9 +72,7 @@ export function useMock(options: MockOptions = {}): void {
     } else if (req.reboot !== undefined) {
       callback(null, { reboot: {} });
     } else if (req.startSpeedtest !== undefined) {
-      callback(null, { startSpeedtest: {} });
-    } else if (req.getSpeedtestResult !== undefined) {
-      callback(null, { getSpeedtestResult: { downloadBps: 95_000_000, uploadBps: 11_000_000, latencyMs: 27.0, running: false } });
+      callback(null, { speedTest: { downloadMbps: 95.0, uploadMbps: 11.0, latencyMs: 27.0 } });
     } else {
       callback(new Error('Unknown mock request') as any, null);
     }
