@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { formatStatus, formatHistory, formatSpeedTest } from '../cli/format';
-import type { DishStatus, DishHistory, SpeedTestResult } from '../src/types';
+import type { DishStatus, SpeedTestResult } from '../src/types';
 
 const sampleStatus: DishStatus = {
   deviceId: 'ut01-test',
@@ -62,5 +62,22 @@ describe('formatSpeedTest()', () => {
     const out = formatSpeedTest(sampleResult);
     expect(out).toContain('95.4');
     expect(out).toContain('11.2');
+  });
+});
+
+const sampleHistory = {
+  pingLatencyMs: [25.0, 30.0, 35.0],
+  downlinkThroughputBps: [100_000_000, 110_000_000, 120_000_000],
+};
+
+describe('formatHistory()', () => {
+  it('includes average download Mbps', () => {
+    const out = formatHistory(sampleHistory);
+    expect(out).toContain('110.0');  // average of 100, 110, 120 Mbps
+  });
+
+  it('includes average ping latency', () => {
+    const out = formatHistory(sampleHistory);
+    expect(out).toContain('30.0');  // average of 25, 30, 35
   });
 });

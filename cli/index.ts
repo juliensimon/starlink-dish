@@ -25,7 +25,7 @@ program
   .option('--json', 'output raw JSON')
   .action(async (cmdOpts) => {
     const opts = program.opts<{ address: string; mock?: boolean }>();
-    if (!await connect(opts)) process.exit(1);
+    if (!await connect(opts)) { closeClient(); process.exit(1); }
     const s = await getStatus();
     closeClient();
     if (!s) { console.error('Failed to get status'); process.exit(1); }
@@ -38,7 +38,7 @@ program
   .option('--json', 'output raw JSON')
   .action(async (cmdOpts) => {
     const opts = program.opts<{ address: string; mock?: boolean }>();
-    if (!await connect(opts)) process.exit(1);
+    if (!await connect(opts)) { closeClient(); process.exit(1); }
     const h = await getHistory();
     closeClient();
     if (!h) { console.error('Failed to get history'); process.exit(1); }
@@ -57,7 +57,7 @@ program
       });
       if (line.toLowerCase() !== 'y') { console.log('Aborted.'); process.exit(0); }
     }
-    if (!await connect(opts)) process.exit(1);
+    if (!await connect(opts)) { closeClient(); process.exit(1); }
     const ok = await reboot();
     closeClient();
     console.log(ok ? 'Reboot command sent.' : 'Reboot failed.');
@@ -70,7 +70,7 @@ program
   .option('--json', 'output raw JSON')
   .action(async (cmdOpts) => {
     const opts = program.opts<{ address: string; mock?: boolean }>();
-    if (!await connect(opts)) process.exit(1);
+    if (!await connect(opts)) { closeClient(); process.exit(1); }
     console.log('Running speed test...');
     const r = await speedTest();
     closeClient();
@@ -78,4 +78,7 @@ program
     console.log(cmdOpts.json ? JSON.stringify(r, null, 2) : formatSpeedTest(r));
   });
 
-program.parseAsync(process.argv);
+program.parseAsync(process.argv).catch((err: unknown) => {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exit(1);
+});

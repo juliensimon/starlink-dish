@@ -1,4 +1,4 @@
-import type { DishStatus, DishHistory, SpeedTestResult } from '../src/types';
+import type { DishStatus, SpeedTestResult } from '../src/types';
 
 function formatUptime(seconds: number): string {
   const d = Math.floor(seconds / 86400);
