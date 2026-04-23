@@ -1,24 +1,55 @@
 # starlink-dish
 
-TypeScript client library and CLI for the Starlink dish local gRPC API.
+[![npm version](https://img.shields.io/npm/v/starlink-dish)](https://www.npmjs.com/package/starlink-dish)
+[![CI](https://github.com/juliensimon/starlink-dish/actions/workflows/ci.yml/badge.svg)](https://github.com/juliensimon/starlink-dish/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/node/v/starlink-dish)](https://www.npmjs.com/package/starlink-dish)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
+
+TypeScript client library and CLI for the **Starlink dish local gRPC API** (`192.168.100.1:9200`).
+
+No existing TypeScript/Node.js Starlink client existed — this fills that gap. Useful for building monitoring dashboards, Home Assistant integrations, and ISP tooling.
+
+```
+Starlink Dish  •  hw: rev4_proto3  sw: 2025.12.0  up: 3d 4h
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Download    87.3 Mbps   Upload    14.2 Mbps
+ Ping        28.4 ms     Drop      0.02%
+ SNR         above noise floor
+ Obstruction 0.3%        GPS sats  9
+ Boresight   Az 192°  El 47°
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Alerts: none
+```
+
+## Related projects
+
+- [sparky8512/starlink-grpc-tools](https://github.com/sparky8512/starlink-grpc-tools) — Python, the canonical reference
+- [ewilken/starlink-rs](https://github.com/ewilken/starlink-rs) — Rust
+- [clarkzjw/starlink-grpc-golang](https://github.com/clarkzjw/starlink-grpc-golang) — Go
 
 ## Installation
 
 ```bash
+# As a library
 npm install starlink-dish
+
+# As a global CLI
+npm install -g starlink-dish
 ```
 
-## CLI Usage
+## CLI
 
 ```bash
-# Install globally
-npm install -g starlink-dish
-
-# Show dish status
+# Show dish status (pretty-printed)
 starlink-dish status
+
+# Show dish status as JSON (pipeable)
+starlink-dish status --json
 
 # Show telemetry history
 starlink-dish history
+starlink-dish history --json
 
 # Run a speed test
 starlink-dish speed-test
@@ -26,65 +57,132 @@ starlink-dish speed-test
 # Reboot the dish (prompts for confirmation)
 starlink-dish reboot
 
-# Output as JSON
-starlink-dish status --json
-
-# Use mock data (no dish required)
+# Use mock data — no dish required
 starlink-dish --mock status
+starlink-dish --mock speed-test
 
-# Connect to custom address
+# Connect to a custom address
 starlink-dish --address 10.0.0.1:9200 status
 ```
 
-## Library Usage
+## Library usage
 
 ```typescript
-import { initClient, closeClient, getStatus, getHistory, useMock } from 'starlink-dish';
+import {
+  initClient, closeClient, isConnected,
+  getStatus, getHistory,
+  reboot, speedTest,
+  useMock,
+} from 'starlink-dish';
 
-// Connect to dish (default: 192.168.100.1:9200)
+// Connect to dish at the default address (192.168.100.1:9200)
 const connected = await initClient();
 
 if (connected) {
   const status = await getStatus();
-  console.log(status?.downlinkThroughputBps);
+  console.log(`Download: ${status?.downlinkThroughputBps / 1e6} Mbps`);
+  console.log(`SNR ok: ${status?.snrAboveNoiseFloor}`);
 
   const history = await getHistory();
-  console.log(history?.pingLatencyMs);
+  const avgPing = history?.pingLatencyMs.reduce((a, b) => a + b, 0) / history?.pingLatencyMs.length;
+  console.log(`Avg ping: ${avgPing?.toFixed(1)} ms`);
 
   closeClient();
 }
-
-// Mock mode — no dish needed
-useMock();
-const status = await getStatus();
 ```
 
-## API
+### Mock mode (no dish needed)
+
+```typescript
+import { useMock, getStatus, getHistory, speedTest } from 'starlink-dish';
+
+useMock();                        // call before any API function
+const status = await getStatus(); // returns realistic generated data
+
+useMock({ faultRate: 0.1 });     // 10% random failure rate for resilience testing
+```
+
+## API reference
 
 ### Connection
 
-- `initClient(address?: string): Promise<boolean>` — connect to dish, returns false if unreachable
-- `closeClient(): void` — close connection
-- `isConnected(): boolean` — check connection state
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `initClient(address?)` | `Promise<boolean>` | Connect to dish. Default address: `192.168.100.1:9200`. Returns `false` if unreachable. |
+| `closeClient()` | `void` | Close the gRPC connection. |
+| `isConnected()` | `boolean` | `true` if a connection is active. |
 
 ### Telemetry
 
-- `getStatus(): Promise<DishStatus | null>`
-- `getHistory(): Promise<DishHistory | null>`
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `getStatus()` | `Promise<DishStatus \| null>` | Current dish state and metrics. |
+| `getHistory()` | `Promise<DishHistory \| null>` | Last 60 samples of throughput, latency, and drop rate. |
 
 ### Control
 
-- `reboot(): Promise<boolean>`
-- `speedTest(): Promise<SpeedTestResult | null>`
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `reboot()` | `Promise<boolean>` | Send a reboot command. Returns `true` on success. |
+| `speedTest()` | `Promise<SpeedTestResult \| null>` | Run a speed test (takes 10–30 seconds). |
 
-### Mock Mode
+### Mock mode
 
-- `useMock(options?: MockOptions): void` — install mock transport for development
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `useMock(options?)` | `void` | Install a mock transport. Call before `initClient()` or any API function. |
 
 ## Types
 
-See [src/types.ts](src/types.ts) for the full type definitions.
+```typescript
+interface DishStatus {
+  deviceId: string;
+  hardwareVersion: string;
+  softwareVersion: string;
+  countryCode: string;
+  bootcount: number;
+  uptimeSeconds: number;
+  state: 'CONNECTED' | 'UNKNOWN';
+  downlinkThroughputBps: number;
+  uplinkThroughputBps: number;
+  popPingLatencyMs: number;
+  popPingDropRate: number;         // 0–1
+  obstructionPercentTime: number;  // 0–100
+  currentlyObstructed: boolean;
+  snrAboveNoiseFloor: boolean;
+  snrPersistentlyLow: boolean;
+  boresightAzimuthDeg: number;
+  boresightElevationDeg: number;
+  gpsValid: boolean;
+  gpsSats: number;
+  ethSpeedMbps: number;
+  alerts: string[];                // e.g. ['motors_stuck', 'thermal_throttle']
+}
+
+interface DishHistory {
+  current: number;                 // write-index into the circular buffer
+  pingLatencyMs: number[];
+  pingDropRate: number[];
+  downlinkThroughputBps: number[];
+  uplinkThroughputBps: number[];
+}
+
+interface SpeedTestResult {
+  downloadMbps: number;
+  uploadMbps: number;
+  latencyMs: number;
+}
+
+interface MockOptions {
+  faultRate?: number;              // 0–1, probability of returning null
+}
+```
+
+## Requirements
+
+- Node.js 18+
+- A Starlink dish on your local network (or use `--mock` / `useMock()`)
 
 ## License
 
-MIT
+MIT © [Julien Simon](https://github.com/juliensimon)
