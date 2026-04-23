@@ -27,7 +27,7 @@ function buildStatusResponse(t: number) {
       isSnrPersistentlyLow: false,
       boresightAzimuthDeg: 0,
       boresightElevationDeg: 0,
-      gpsStats: { gpsValid: true, gpsSats: 8 + Math.floor(Math.random() * 4) },
+      gpsStats: { gpsValid: true, gpsSats: 8 + Math.floor(Math.abs(smoothNoise(t, 0.03, 0.11)) * 4) },
       ethSpeedMbps: 1000,
       alerts: {},
     },
@@ -56,22 +56,23 @@ export function useMock(options: MockOptions = {}): void {
   const { faultRate = 0 } = options;
   const start = Date.now();
 
-  setHandle((request: any, callback) => {
+  setHandle((request, callback) => {
+    const req = request as Record<string, unknown>;
     if (Math.random() < faultRate) {
       callback(new Error('Mock fault injected') as any, null);
       return;
     }
     const t = (Date.now() - start) / 1000;
 
-    if (request.getStatus !== undefined) {
+    if (req.getStatus !== undefined) {
       callback(null, buildStatusResponse(t));
-    } else if (request.getHistory !== undefined) {
+    } else if (req.getHistory !== undefined) {
       callback(null, buildHistoryResponse(t));
-    } else if (request.reboot !== undefined) {
+    } else if (req.reboot !== undefined) {
       callback(null, { reboot: {} });
-    } else if (request.startSpeedtest !== undefined) {
+    } else if (req.startSpeedtest !== undefined) {
       callback(null, { startSpeedtest: {} });
-    } else if (request.getSpeedtestResult !== undefined) {
+    } else if (req.getSpeedtestResult !== undefined) {
       callback(null, { getSpeedtestResult: { downloadBps: 95_000_000, uploadBps: 11_000_000, latencyMs: 27.0, running: false } });
     } else {
       callback(new Error('Unknown mock request') as any, null);
