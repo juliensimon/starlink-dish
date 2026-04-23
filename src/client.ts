@@ -5,6 +5,8 @@ import { setHandle, clearHandle } from './transport';
 
 const PROTO_PATH = path.join(__dirname, '../../proto/dish.proto');
 
+let _client: grpc.Client | null = null;
+
 export async function initClient(address = '192.168.100.1:9200'): Promise<boolean> {
   try {
     const packageDefinition = await protoLoader.load(PROTO_PATH, {
@@ -19,17 +21,17 @@ export async function initClient(address = '192.168.100.1:9200'): Promise<boolea
     const DeviceService = (proto as any).SpaceX?.API?.Device?.Device;
     if (!DeviceService) return false;
 
-    const client = new DeviceService(address, grpc.credentials.createInsecure(), {
+    _client = new DeviceService(address, grpc.credentials.createInsecure(), {
       'grpc.keepalive_time_ms': 10000,
       'grpc.keepalive_timeout_ms': 5000,
     });
 
     return new Promise((resolve) => {
       const deadline = new Date(Date.now() + 3000);
-      client.waitForReady(deadline, (err: Error | null) => {
+      _client!.waitForReady(deadline, (err?: Error) => {
         if (err) { resolve(false); return; }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setHandle((client as any).handle.bind(client));
+        setHandle((_client as any).handle.bind(_client));
         resolve(true);
       });
     });
@@ -39,5 +41,7 @@ export async function initClient(address = '192.168.100.1:9200'): Promise<boolea
 }
 
 export function closeClient(): void {
+  _client?.close();
+  _client = null;
   clearHandle();
 }
