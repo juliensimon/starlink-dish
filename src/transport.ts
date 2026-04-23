@@ -2,7 +2,7 @@ import type { ServiceError } from '@grpc/grpc-js';
 
 export type HandleFn = (
   request: unknown,
-  callback: (err: ServiceError | null, response: unknown) => void
+  callback: (err: ServiceError | null, response?: unknown) => void
 ) => void;
 
 let _handle: HandleFn | null = null;
